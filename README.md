@@ -16,5 +16,10 @@ which gives
 ```
 For example, if you want to generate a 2x3x4 supercell using the POSCAR in the current directory, please run 
 ```console
-go run VaspSuperCell.go -v1 2 -v2 3 -v3 4 ./POSCAR
+go run VaspSuperCell.go -v1 2 -v2 3 -v3 4 -s ./POSCAR
 ```
+or 
+```console
+go run VaspSuperCell.go -v1 2 -v2 3 -v3 4
+```
+The later one uses the default value POSCAR for "-s". 
