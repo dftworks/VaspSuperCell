@@ -9,7 +9,26 @@ import (
 	"strings"
 )
 
-func ReadLines(textfile string) (lines []string, err error) {
+type POSITION struct {
+	x float64
+	y float64
+	z float64
+}
+
+type POSCAR struct {
+	comment    string
+	latt_const float64
+	latt_a     []float64
+	latt_b     []float64
+	latt_c     []float64
+	atoms      []string
+	natoms     []int
+	ntotatom   int
+	isfrac     bool
+	pos        []POSITION
+}
+
+func read_lines(textfile string) (lines []string, err error) {
 	f, err := os.Open(textfile)
 	if err != nil {
 		return
@@ -24,7 +43,7 @@ func ReadLines(textfile string) (lines []string, err error) {
 	return
 }
 
-func StrsToInts(strs []string) []int {
+func strs_to_ints(strs []string) []int {
 	var is = []int{}
 	for _, x := range strs {
 		t, _ := strconv.Atoi(x)
@@ -34,7 +53,7 @@ func StrsToInts(strs []string) []int {
 	return is
 }
 
-func StrsToFloat64s(strs []string) []float64 {
+func strs_to_float64s(strs []string) []float64 {
 	var fs = []float64{}
 	for _, x := range strs {
 		t, _ := strconv.ParseFloat(x, 64)
@@ -43,12 +62,12 @@ func StrsToFloat64s(strs []string) []float64 {
 	return fs
 }
 
-func StrToFloat64(str string) float64 {
+func str_to_float64(str string) float64 {
 	t, _ := strconv.ParseFloat(strings.TrimSpace(str), 64)
 	return t
 }
 
-func LineToFloat64s(str string) []float64 {
+func line_to_float64s(str string) []float64 {
 	sl := strings.Fields(str)
 	var fs = []float64{}
 
@@ -59,7 +78,7 @@ func LineToFloat64s(str string) []float64 {
 	return fs
 }
 
-func SumSliceInt(s []int) int {
+func sum_of_slice_int(s []int) int {
 	var sum int = 0
 	for _, x := range s {
 		sum += x
@@ -67,33 +86,9 @@ func SumSliceInt(s []int) int {
 	return sum
 }
 
-type Position struct {
-	x float64
-	y float64
-	z float64
-}
-
-type Atom struct {
-	symbol  string
-	x, y, z float64
-}
-
-type POSCAR struct {
-	comment    string
-	latt_const float64
-	latt_a     []float64
-	latt_b     []float64
-	latt_c     []float64
-	atoms      []string
-	natoms     []int
-	ntotatom   int
-	isfrac     bool
-	pos        []Position
-}
-
 func extend(p POSCAR, n1 int, n2 int, n3 int) (sp POSCAR) {
 
-	sp.comment = "This is a supercell created with VaspSuperCell.go"
+	sp.comment = "This is a supercell created with dftworks -- VaspSuperCell.go"
 	sp.latt_const = p.latt_const
 
 	for i := 0; i < 3; i++ {
@@ -119,7 +114,7 @@ func extend(p POSCAR, n1 int, n2 int, n3 int) (sp POSCAR) {
 				for j3 := 0; j3 < n3; j3++ {
 
 					for _, at := range atoms {
-						var t Position
+						var t POSITION
 						t.x = (at.x + float64(j1)) / float64(n1)
 						t.y = (at.y + float64(j2)) / float64(n2)
 						t.z = (at.z + float64(j3)) / float64(n3)
@@ -133,51 +128,26 @@ func extend(p POSCAR, n1 int, n2 int, n3 int) (sp POSCAR) {
 		istart = iend
 	}
 
-	sp.ntotatom = SumSliceInt(sp.natoms)
+	sp.ntotatom = sum_of_slice_int(sp.natoms)
 	sp.isfrac = p.isfrac
-	
+
 	return
 }
 
-func display(p POSCAR) {
-	fmt.Println(p.comment)
+func parse_text_file(poscarfile string) (poscar POSCAR) {
 
-	fmt.Printf("%s\n", "Lattice Constant:")
-	fmt.Printf("%20.12f\n", p.latt_const)
-
-	fmt.Printf("%s\n", "Vector a:")
-	fmt.Printf("%20.12f\n", p.latt_a)
-
-	fmt.Printf("%s\n", "Vector b:")
-	fmt.Printf("%20.12f\n", p.latt_b)
-
-	fmt.Printf("%s\n", "Vector c:")
-	fmt.Printf("%20.12f\n", p.latt_c)
-
-	fmt.Println(p.atoms)
-
-	fmt.Printf("%6d\n", p.natoms)
-
-	fmt.Println(p.isfrac)
-
-	for i, _ := range p.pos {
-		fmt.Printf("%20.12f\n", p.pos[i])
-	}
-}
-
-func parse(poscarfile string) (poscar POSCAR) {
-	lines, _ := ReadLines(poscarfile)
+	lines, _ := read_lines(poscarfile)
 
 	poscar.comment = lines[0]
-	poscar.latt_const = StrToFloat64(lines[1])
-	poscar.latt_a = LineToFloat64s(lines[2])
-	poscar.latt_b = LineToFloat64s(lines[3])
-	poscar.latt_c = LineToFloat64s(lines[4])
+	poscar.latt_const = str_to_float64(lines[1])
+	poscar.latt_a = line_to_float64s(lines[2])
+	poscar.latt_b = line_to_float64s(lines[3])
+	poscar.latt_c = line_to_float64s(lines[4])
 
 	poscar.atoms = strings.Fields(lines[5])
-	poscar.natoms = StrsToInts(strings.Fields(lines[6]))
+	poscar.natoms = strs_to_ints(strings.Fields(lines[6]))
 
-	poscar.ntotatom = SumSliceInt(poscar.natoms)
+	poscar.ntotatom = sum_of_slice_int(poscar.natoms)
 
 	if strings.TrimSpace(lines[7])[0] == 'D' {
 		poscar.isfrac = true
@@ -187,15 +157,18 @@ func parse(poscarfile string) (poscar POSCAR) {
 
 	base := 8
 	for i := 0; i < poscar.ntotatom; i++ {
-		tpos := LineToFloat64s(lines[base+i])
-		var pos Position
-		pos.x = tpos[0]
-		pos.y = tpos[1]
-		pos.z = tpos[2]
+
+		t := line_to_float64s(lines[base+i])
+
+		var pos POSITION
+		pos.x = t[0]
+		pos.y = t[1]
+		pos.z = t[2]
 
 		poscar.pos = append(poscar.pos, pos)
 
 	}
+
 	return
 }
 
@@ -212,49 +185,46 @@ func get_opts() (p_n1, p_n2, p_n3 *int, p_poscarfile *string) {
 }
 
 func output_vasp(p POSCAR) {
-     fmt.Printf("%s\n", p.comment)
-     fmt.Printf("%20.16f\n", p.latt_const)
 
-     var v = p.latt_a
-     fmt.Printf("%22.16f%22.16f%22.16f\n", v[0], v[1], v[2])
+	fmt.Printf("%s\n", p.comment)
 
-     v = p.latt_b
-     fmt.Printf("%22.16f%22.16f%22.16f\n", v[0], v[1], v[2])
+	fmt.Printf("%20.16f\n", p.latt_const)
 
-     v = p.latt_c
-     fmt.Printf("%22.16f%22.16f%22.16f\n", v[0], v[1], v[2])
+	var v = p.latt_a
+	fmt.Printf("%22.16f%22.16f%22.16f\n", v[0], v[1], v[2])
 
-     for _,at := range p.atoms {
-     	fmt.Printf("%5s", at)      
-     }
-     fmt.Printf("\n")
-     
-     for _,n := range p.natoms {
-     	 fmt.Printf("%5d", n)
-     }
-     fmt.Printf("\n")
+	v = p.latt_b
+	fmt.Printf("%22.16f%22.16f%22.16f\n", v[0], v[1], v[2])
 
-     if p.isfrac {
-     	fmt.Printf("%s\n", "Direct")
-     }
+	v = p.latt_c
+	fmt.Printf("%22.16f%22.16f%22.16f\n", v[0], v[1], v[2])
 
-     for _, t := range p.pos {
-     	 fmt.Printf("%22.16f%22.16f%22.16f\n", t.x,t.y,t.z)
-     }
+	for _, at := range p.atoms {
+		fmt.Printf("%5s", at)
+	}
+	fmt.Printf("\n")
 
+	for _, n := range p.natoms {
+		fmt.Printf("%5d", n)
+	}
+	fmt.Printf("\n")
+
+	if p.isfrac {
+		fmt.Printf("%s\n", "Direct")
+	}
+
+	for _, t := range p.pos {
+		fmt.Printf("%22.16f%22.16f%22.16f\n", t.x, t.y, t.z)
+	}
 }
 
 func main() {
 
 	p_n1, p_n2, p_n3, p_poscarfile := get_opts()
 
-	fmt.Println(*p_n1, *p_n2, *p_n3)
-
-	poscar := parse(*p_poscarfile)
-
-	display(poscar)
+	poscar := parse_text_file(*p_poscarfile)
 
 	sp := extend(poscar, *p_n1, *p_n2, *p_n3)
-//	display(sp)
+
 	output_vasp(sp)
 }
