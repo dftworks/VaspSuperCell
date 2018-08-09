@@ -88,7 +88,7 @@ func sum_of_slice_int(s []int) int {
 
 func extend(p POSCAR, n1 int, n2 int, n3 int) (sp POSCAR) {
 
-	sp.comment = "This is a supercell created with dftworks -- VaspSuperCell.go"
+	sp.comment = "This is a supercell created with https://github.com/dftworks/VaspSuperCell"
 	sp.latt_const = p.latt_const
 
 	for i := 0; i < 3; i++ {
@@ -211,6 +211,8 @@ func output_vasp(p POSCAR) {
 
 	if p.isfrac {
 		fmt.Printf("%s\n", "Direct")
+	} else {
+		fmt.Printf("%s\n", "Cartesian")
 	}
 
 	for _, t := range p.pos {
